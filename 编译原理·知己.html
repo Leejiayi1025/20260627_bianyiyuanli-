@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover,user-scalable=no">
+<title>编译原理 · 知己</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN SYSTEM — Tokens
+   ============================================================ */
+:root {
+  /* Colors — Primary */
+  --pri-50: #F0F4FF;
+  --pri-100: #D6E4FF;
+  --pri-200: #ADC8FF;
+  --pri-300: #84A9FF;
+  --pri-400: #6690FF;
+  --pri-500: #3366FF;
+  --pri-600: #254EDB;
+  --pri-700: #1939B7;
+  --pri-800: #102893;
+  --pri-900: #091A7A;
+  --pri: var(--pri-500);
+  /* Colors — Neutral */
+  --n-50: #F8F9FC;
+  --n-100: #F0F1F5;
+  --n-200: #E2E4EB;
+  --n-300: #C8CCD6;
+  --n-400: #9EA2B3;
+  --n-500: #6B7084;
+  --n-600: #525668;
+  --n-700: #3B3F50;
+  --n-800: #282C3A;
+  --n-900: #181B26;
+  --n-950: #0F1118;
+  /* Colors — Semantic */
+  --suc: #22C55E;
+  --suc-bg: #F0FDF4;
+  --err: #EF4444;
+  --err-bg: #FEF2F2;
+  --warn: #F59E0B;
+  --warn-bg: #FFFBEB;
+  /* Typography */
+  --ff-sans: 'Inter', 'Noto Sans SC', -apple-system, sans-serif;
+  --ff-mono: 'JetBrains Mono', 'SF Mono', monospace;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-base: 0.9375rem;
+  --fs-md: 1.0625rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.5rem;
+  --fs-2xl: 2rem;
+  --fs-3xl: 2.5rem;
+  --lh-tight: 1.25;
+  --lh-base: 1.6;
+  --lh-relaxed: 1.75;
+  /* Spacing */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.25rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+  --sp-10: 2.5rem;
+  --sp-12: 3rem;
+  --sp-16: 4rem;
+  /* Border Radius */
+  --r-sm: 0.5rem;
+  --r-md: 0.75rem;
+  --r-lg: 1rem;
+  --r-xl: 1.25rem;
+  --r-2xl: 1.5rem;
+  --r-full: 9999px;
+  /* Shadows */
+  --sh-sm: 0 1px 2px rgba(0,0,0,.04), 0 1px 4px rgba(0,0,0,.04);
+  --sh-md: 0 4px 12px rgba(0,0,0,.06), 0 2px 4px rgba(0,0,0,.04);
+  --sh-lg: 0 12px 32px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04);
+  --sh-xl: 0 24px 48px rgba(0,0,0,.10);
+  /* Layout */
+  --header-h: 56px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  /* Transitions */
+  --tr-fast: 150ms cubic-bezier(.4,0,.2,1);
+  --tr-base: 250ms cubic-bezier(.4,0,.2,1);
+  --tr-slow: 400ms cubic-bezier(.4,0,.2,1);
+  /* Theme */
+  --bg: var(--n-50);
+  --bg-card: #FFFFFF;
+  --bg-hover: var(--n-100);
+  --text: var(--n-900);
+  --text-soft: var(--n-600);
+  --text-mute: var(--n-400);
+  --text-inv: #FFFFFF;
+  --border: var(--n-200);
+  --accent: var(--pri);
+  --accent-soft: var(--pri-50);
+  --accent-hover: var(--pri-600);
+  --header-bg: rgba(255,255,255,.82);
+  --header-border: var(--n-200);
+}
+
+[data-theme="dark"] {
+  --bg: var(--n-950);
+  --bg-card: var(--n-900);
+  --bg-hover: var(--n-800);
+  --text: var(--n-100);
+  --text-soft: var(--n-400);
+  --text-mute: var(--n-500);
+  --text-inv: var(--n-950);
+  --border: #2A2E3E;
+  --accent: var(--pri-400);
+  --accent-soft: rgba(51,102,255,.10);
+  --accent-hover: var(--pri-300);
+  --header-bg: rgba(15,17,24,.82);
+  --header-border: #2A2E3E;
+  --sh-sm: 0 1px 2px rgba(0,0,0,.2);
+  --sh-md: 0 4px 12px rgba(0,0,0,.3);
+  --sh-lg: 0 12px 32px rgba(0,0,0,.4);
+  --suc-bg: rgba(34,197,94,.10);
+  --err-bg: rgba(239,68,68,.10);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--ff-sans);font-size:var(--fs-base);line-height:var(--lh-relaxed);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden;min-height:100vh;min-height:-webkit-fill-available;-webkit-overflow-scrolling:touch}
+html{height:-webkit-fill-available}
+::selection{background:var(--accent);color:#fff}
+::selection{background:var(--accent);color:#fff}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.hd{position:fixed;top:0;left:0;right:0;height:var(--header-h);z-index:100;display:flex;align-items:center;padding:0 var(--sp-6);background:var(--header-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--header-border);transition:background var(--tr-base)}
+.hd-t{font-size:var(--fs-lg);font-weight:700;letter-spacing:-.02em;color:var(--text)}
+.hd-s{font-size:var(--fs-xs);color:var(--text-mute);margin-left:var(--sp-2);font-weight:400}
+.hd-r{flex:1}
+.hd-btn{width:36px;height:36px;border-radius:var(--r-full);border:none;background:transparent;color:var(--text-soft);font-size:var(--fs-lg);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all var(--tr-fast);margin-left:var(--sp-1);position:relative}
+.hd-btn:hover{background:var(--bg-hover);color:var(--text)}
+.hd-btn:active{transform:scale(.9)}
+
+/* ============================================================
+   SCREENS
+   ============================================================ */
+.mn{padding-top:var(--header-h);padding-bottom:var(--safe-b);min-height:100vh}
+.scr{display:none;padding:var(--sp-6);max-width:640px;margin:0 auto;padding-bottom:calc(var(--sp-6) + var(--safe-b));animation:fadeUp .35s ease}
+.scr.act{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+
+/* ============================================================
+   HOME — Hero Cards
+   ============================================================ */
+.hm{text-align:center;padding:var(--sp-6) 0 var(--sp-5)}
+.hm .h-icon{width:48px;height:48px;border-radius:var(--r-xl);background:linear-gradient(135deg,var(--pri),var(--pri-700));display:flex;align-items:center;justify-content:center;margin:0 auto var(--sp-3);font-size:22px;color:#fff;box-shadow:0 6px 20px rgba(51,102,255,.2)}
+.hm h1{font-size:var(--fs-xl);font-weight:800;letter-spacing:-.03em;color:var(--text);margin-bottom:2px}
+.hm .sub{font-size:var(--fs-xs);color:var(--text-soft);margin-bottom:var(--sp-2)}
+.hm .stat{display:flex;justify-content:center;gap:var(--sp-6);margin-top:var(--sp-4);padding:var(--sp-3) var(--sp-4);background:var(--bg-card);border-radius:var(--r-lg);border:1px solid var(--border)}
+.hm .stat .s{text-align:center}
+.hm .stat .s .n{font-size:var(--fs-md);font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.hm .stat .s .l{font-size:var(--fs-xs);color:var(--text-mute);margin-top:1px}
+
+.card-grid{display:flex;flex-direction:column;gap:var(--sp-2);margin-top:var(--sp-3)}
+.card{background:var(--bg-card);border:1.5px solid var(--border);border-radius:var(--r-xl);padding:var(--sp-3) var(--sp-4);cursor:pointer;transition:all var(--tr-base);text-decoration:none;color:inherit;position:relative;overflow:hidden;display:flex;align-items:center;gap:var(--sp-3)}
+.card:active{transform:scale(.97)}
+.card:hover{border-color:var(--accent);box-shadow:var(--sh-md)}
+.card:hover .card-arrow{transform:translateX(4px);opacity:1;color:var(--accent)}
+.card .card-icon{width:40px;height:40px;border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;margin-bottom:0}
+.card .card-icon.gold{background:linear-gradient(135deg,#FFF7ED,#FFEDD5);color:#EA580C}
+.card .card-icon.blue{background:var(--accent-soft);color:var(--accent)}
+.card .card-icon.red{background:#FEF2F2;color:#DC2626}
+.card .card-icon.green{background:#F0FDF4;color:#16A34A}
+[data-theme="dark"] .card .card-icon.gold{background:rgba(234,88,12,.15);color:#F97316}
+[data-theme="dark"] .card .card-icon.blue{background:rgba(51,102,255,.15);color:var(--accent)}
+[data-theme="dark"] .card .card-icon.red{background:rgba(220,38,38,.15);color:#EF4444}
+[data-theme="dark"] .card .card-icon.green{background:rgba(22,163,74,.15);color:#22C55E}
+.card .card-body{flex:1;min-width:0}
+.card .card-title{font-size:var(--fs-base);font-weight:600;color:var(--text);letter-spacing:-.01em}
+.card .card-desc{font-size:var(--fs-xs);color:var(--text-mute);line-height:1.3;margin-top:1px}
+.card .card-arrow{font-size:var(--fs-lg);color:var(--text-mute);opacity:.3;transition:all var(--tr-fast);flex-shrink:0}
+
+/* Bottom action buttons */
+.actions{display:flex;gap:var(--sp-2);margin-top:var(--sp-4);justify-content:center;flex-wrap:wrap}
+.action-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 18px;border-radius:var(--r-full);border:1px solid var(--border);background:var(--bg-card);color:var(--text-soft);font-family:var(--ff-sans);font-size:var(--fs-xs);font-weight:500;cursor:pointer;transition:all var(--tr-fast);text-decoration:none}
+.action-btn:hover{border-color:var(--accent);color:var(--accent);box-shadow:var(--sh-sm)}
+.action-btn:active{transform:scale(.96)}
+
+/* ============================================================
+   TOP BAR (chapter list / chapter detail / exam)
+   ============================================================ */
+.top-bar{display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-5);padding-top:var(--sp-2)}
+.top-bar .tb-back{width:36px;height:36px;border-radius:var(--r-full);border:none;background:var(--bg-hover);color:var(--text-soft);font-size:var(--fs-lg);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--tr-fast);flex-shrink:0}
+.top-bar .tb-back:hover{background:var(--border);color:var(--text)}
+.top-bar .tb-back:active{transform:scale(.9)}
+.top-bar .tb-title{font-size:var(--fs-md);font-weight:600;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top-bar .tb-meta{font-size:var(--fs-xs);color:var(--text-mute);font-variant-numeric:tabular-nums;flex-shrink:0}
+
+/* ============================================================
+   CHAPTER LIST
+   ============================================================ */
+.ch-list{display:flex;flex-direction:column;gap:var(--sp-2)}
+.ch-item{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-lg);cursor:pointer;transition:all var(--tr-fast)}
+.ch-item:hover{border-color:var(--accent);box-shadow:var(--sh-sm)}
+.ch-item:active{transform:scale(.99)}
+.ch-item .ch-num{font-size:var(--fs-xs);font-weight:600;color:var(--accent);min-width:24px;font-variant-numeric:tabular-nums}
+.ch-item .ch-title{flex:1;font-size:var(--fs-base);font-weight:500;color:var(--text)}
+.ch-item .ch-tag{font-size:var(--fs-xs);color:var(--text-mute);padding:2px 10px;border-radius:var(--r-full);background:var(--accent-soft);flex-shrink:0}
+.ch-item .ch-check{width:20px;height:20px;border-radius:var(--r-full);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;color:transparent;flex-shrink:0;transition:all var(--tr-base)}
+.ch-item .ch-check.dn{border-color:var(--accent);background:var(--accent);color:#fff}
+
+/* ============================================================
+   KNOWLEDGE CARDS
+   ============================================================ */
+.ch-detail{padding-bottom:var(--sp-8)}
+.ch-detail .ch-head{margin-bottom:var(--sp-5)}
+.ch-detail .ch-head .ch-num{font-size:var(--fs-xs);font-weight:600;color:var(--accent);letter-spacing:.05em;text-transform:uppercase;margin-bottom:var(--sp-1)}
+.ch-detail .ch-head h2{font-size:var(--fs-xl);font-weight:700;color:var(--text);letter-spacing:-.02em}
+
+.kc{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-lg);margin-bottom:var(--sp-3);transition:all var(--tr-fast);position:relative;overflow:hidden}
+.kc::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--accent);opacity:.3;border-radius:0 0 0 3px}
+.kc:hover{border-color:var(--accent);box-shadow:var(--sh-sm)}
+.kc:hover::before{opacity:.7}
+.kc .kc-head{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);cursor:pointer;user-select:none;transition:background var(--tr-fast)}
+.kc .kc-head:hover{background:var(--bg-hover);border-radius:var(--r-lg)}
+.kc .kc-head .kc-arrow{width:20px;height:20px;border-radius:var(--r-sm);background:var(--bg-hover);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-mute);transition:all var(--tr-base);flex-shrink:0;line-height:1}
+.kc .kc-head.cd .kc-arrow{background:transparent;transform:rotate(-90deg)}
+.kc .kc-head .kc-title{font-size:var(--fs-base);font-weight:600;color:var(--text);letter-spacing:-.01em}
+.kc .kc-head .kc-badge{font-size:9px;padding:2px 10px;border-radius:var(--r-full);background:var(--accent-soft);color:var(--accent);font-weight:500;letter-spacing:.03em;margin-left:auto;flex-shrink:0}
+.kc .kc-body{overflow:hidden;transition:max-height var(--tr-base),opacity var(--tr-base);max-height:5000px;opacity:1}
+.kc .kc-body.cd{max-height:0!important;opacity:0;padding:0!important;margin:0!important}
+.kc .kc-body .kb-in{padding:var(--sp-1) var(--sp-5) var(--sp-5)}
+.kc .kc-body ul{list-style:none;padding:0;display:flex;flex-direction:column;gap:2px}
+.kc .kc-body li{font-size:var(--fs-sm);color:var(--text-soft);line-height:var(--lh-relaxed);padding:6px 12px 6px 28px;position:relative;background:transparent;border-radius:var(--r-sm);transition:background var(--tr-fast)}
+.kc .kc-body li:nth-child(odd){background:var(--bg)}
+.kc .kc-body li:hover{background:var(--accent-soft)}
+.kc .kc-body li::before{content:'';position:absolute;left:10px;top:14px;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.4}
+.kc .kc-body li b{color:var(--accent);font-weight:600;font-size:calc(var(--fs-sm) + 1px)}
+.kc .kc-body li .hl{color:var(--accent);font-weight:600}
+.kc .kc-body p{font-size:var(--fs-sm);color:var(--text-soft);padding:4px 0}
+
+.cb{background:var(--bg-card);border:1px solid var(--accent-soft);border-radius:var(--r-lg);padding:var(--sp-3) var(--sp-4);margin:var(--sp-3) 0;font-family:var(--ff-mono);font-size:var(--fs-xs);line-height:2;overflow-x:auto;white-space:pre;color:var(--text);position:relative;box-shadow:inset 0 0 0 1px rgba(51,102,255,.04)}
+.cb::before{content:'CODE';position:absolute;top:6px;right:10px;font-family:var(--ff-sans);font-size:8px;font-weight:600;letter-spacing:1px;color:var(--accent);opacity:.4}
+[data-theme="dark"] .cb{background:rgba(15,17,24,.5);border-color:rgba(51,102,255,.15)}
+
+.fb-box{background:linear-gradient(135deg,var(--accent-soft),var(--bg-card));border-radius:var(--r-lg);padding:var(--sp-4) var(--sp-5);margin:var(--sp-3) 0;font-family:var(--ff-mono);font-size:var(--fs-sm);text-align:center;color:var(--text);border:1px solid rgba(51,102,255,.12);position:relative}
+.fb-box::before{content:'FORMULA';position:absolute;top:6px;left:12px;font-family:var(--ff-sans);font-size:8px;font-weight:600;letter-spacing:1px;color:var(--accent);opacity:.3}
+
+.co{background:linear-gradient(135deg,var(--warn-bg),transparent);border-radius:var(--r-lg);padding:var(--sp-4) var(--sp-5);margin:var(--sp-3) 0;font-size:var(--fs-sm);color:var(--text-soft);border:1px solid rgba(245,158,11,.15);line-height:var(--lh-relaxed);position:relative}
+.co b{color:var(--text)}.co .co-t{font-size:9px;font-weight:700;color:var(--warn);letter-spacing:.08em;margin-bottom:var(--sp-1);text-transform:uppercase}
+[data-theme="dark"] .co{background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.12)}
+
+/* Key term highlight inside list items */
+.term{display:inline-block;background:var(--accent-soft);color:var(--accent);font-weight:600;padding:0 6px;border-radius:4px;font-size:inherit}
+
+/* Definition block */
+.def{background:var(--bg);border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);margin:var(--sp-2) 0;border-left:3px solid var(--accent);font-size:var(--fs-sm);color:var(--text);line-height:var(--lh-relaxed);position:relative}
+.def::before{content:'DEF';position:absolute;top:-8px;left:12px;font-size:8px;font-weight:700;letter-spacing:1px;color:var(--accent);opacity:.4;background:var(--bg-card);padding:0 6px}
+
+/* Go Exam Button */
+.go-exam{display:flex;align-items:center;justify-content:center;gap:var(--sp-2);margin-top:var(--sp-6);padding:var(--sp-4) var(--sp-6);border:none;border-radius:var(--r-lg);background:var(--accent);color:#fff;font-family:var(--ff-sans);font-size:var(--fs-base);font-weight:600;cursor:pointer;transition:all var(--tr-fast);width:100%;max-width:320px;margin-left:auto;margin-right:auto}
+.go-exam:hover{background:var(--accent-hover);box-shadow:0 4px 16px rgba(51,102,255,.3);transform:translateY(-1px)}
+.go-exam:active{transform:scale(.98)}
+
+/* ============================================================
+   EXAM
+   ============================================================ */
+.exam-prog{display:flex;gap:4px;margin-bottom:var(--sp-5)}
+.exam-prog .ep-dot{flex:1;height:4px;border-radius:var(--r-full);background:var(--border);transition:all var(--tr-base)}
+.exam-prog .ep-dot.cr{background:var(--suc)}
+.exam-prog .ep-dot.wr{background:var(--err)}
+.exam-prog .ep-dot.ac{background:var(--accent)}
+
+.exam-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-xl);padding:var(--sp-6);margin-bottom:var(--sp-4)}
+.exam-card .ec-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-3)}
+.exam-card .ec-header .ec-tag{font-size:var(--fs-xs);font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
+.exam-card .ec-header .ec-fav{font-size:var(--fs-xs);color:var(--text-mute);cursor:pointer;border:none;background:none;font-family:var(--ff-sans);padding:4px 8px;border-radius:var(--r-sm);transition:all var(--tr-fast)}
+.exam-card .ec-header .ec-fav:hover{background:var(--bg-hover);color:var(--text)}
+.exam-card .ec-header .ec-fav.act{color:var(--warn)}
+.exam-card .ec-q{font-size:var(--fs-md);font-weight:600;color:var(--text);line-height:var(--lh-tight);margin-bottom:var(--sp-5)}
+.exam-card .ec-opts{display:flex;flex-direction:column;gap:var(--sp-2)}
+.exam-card .ec-opts .eco{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);border:1.5px solid var(--border);border-radius:var(--r-lg);font-size:var(--fs-base);color:var(--text);cursor:pointer;transition:all var(--tr-fast);background:transparent;text-align:left;width:100%;font-family:var(--ff-sans)}
+.exam-card .ec-opts .eco:hover:not(.di){border-color:var(--accent);background:var(--accent-soft)}
+.exam-card .ec-opts .eco:active:not(.di){transform:scale(.99)}
+.exam-card .ec-opts .eco .eco-l{width:28px;height:28px;border-radius:var(--r-full);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:600;flex-shrink:0;color:var(--text-mute);transition:all var(--tr-fast)}
+.exam-card .ec-opts .eco.cr{border-color:var(--suc);background:var(--suc-bg)}
+.exam-card .ec-opts .eco.cr .eco-l{border-color:var(--suc);background:var(--suc);color:#fff}
+.exam-card .ec-opts .eco.wr{border-color:var(--err);background:var(--err-bg)}
+.exam-card .ec-opts .eco.wr .eco-l{border-color:var(--err);background:var(--err);color:#fff}
+.exam-card .ec-opts .eco.di{pointer-events:none;opacity:.7}
+.exam-card .ec-fb{margin-top:var(--sp-4);padding:var(--sp-3) var(--sp-4);border-radius:var(--r-md);font-size:var(--fs-sm);line-height:var(--lh-relaxed);animation:fadeIn .25s}
+.exam-card .ec-fb.cr{background:var(--suc-bg);border:1px solid rgba(34,197,94,.2)}
+.exam-card .ec-fb.wr{background:var(--err-bg);border:1px solid rgba(239,68,68,.15)}
+.exam-card .ec-fb .fb-t{font-weight:600;margin-bottom:2px}
+.exam-card .ec-fb .fb-d{color:var(--text-soft)}
+
+.exam-nav{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);margin-top:var(--sp-4)}
+.exam-nav .en-btn{padding:var(--sp-2) var(--sp-5);border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg-card);color:var(--text-soft);font-family:var(--ff-sans);font-size:var(--fs-sm);font-weight:500;cursor:pointer;transition:all var(--tr-fast)}
+.exam-nav .en-btn:hover{border-color:var(--accent);color:var(--accent)}
+.exam-nav .en-btn:disabled{opacity:.3;cursor:not-allowed}
+.exam-nav .en-btn:disabled:hover{border-color:var(--border);color:var(--text-soft)}
+.exam-nav .en-btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+.exam-nav .en-btn.pri:hover{background:var(--accent-hover);box-shadow:0 2px 8px rgba(51,102,255,.25)}
+.exam-nav .en-st{font-size:var(--fs-xs);color:var(--text-mute)}
+
+/* ============================================================
+   EXAM RESULT
+   ============================================================ */
+.exam-res{text-align:center;padding:var(--sp-8) 0}
+.exam-res .er-icon{width:72px;height:72px;border-radius:var(--r-2xl);margin:0 auto var(--sp-5);display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(135deg,var(--accent-soft),transparent)}
+.exam-res h3{font-size:var(--fs-xl);font-weight:700;color:var(--text);margin-bottom:var(--sp-1)}
+.exam-res .er-sub{font-size:var(--fs-sm);color:var(--text-soft);margin-bottom:var(--sp-6)}
+.exam-res .er-stats{display:flex;justify-content:center;gap:var(--sp-8);margin-bottom:var(--sp-6)}
+.exam-res .er-stats .s{text-align:center}
+.exam-res .er-stats .s .n{font-size:var(--fs-xl);font-weight:700;color:var(--accent)}
+.exam-res .er-stats .s .l{font-size:var(--fs-xs);color:var(--text-mute);margin-top:2px}
+.exam-res .er-btns{display:flex;gap:var(--sp-2);justify-content:center;flex-wrap:wrap}
+.exam-res .er-btns button{padding:var(--sp-2) var(--sp-5);border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg-card);color:var(--text-soft);font-family:var(--ff-sans);font-size:var(--fs-sm);font-weight:500;cursor:pointer;transition:all var(--tr-fast)}
+.exam-res .er-btns button:hover{border-color:var(--accent)}
+.exam-res .er-btns button.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+.exam-res .er-btns button.pri:hover{background:var(--accent-hover)}
+
+/* ============================================================
+   WRONG BOOK & QUIZ LIST
+   ============================================================ */
+.q-list{display:flex;flex-direction:column;gap:var(--sp-2)}
+.qli{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-lg);cursor:pointer;transition:all var(--tr-fast)}
+.qli:hover{border-color:var(--accent);box-shadow:var(--sh-sm)}
+.qli:active{transform:scale(.99)}
+.qli .qli-n{font-size:var(--fs-xs);font-weight:600;color:var(--accent);min-width:20px}
+.qli .qli-t{flex:1;font-size:var(--fs-sm);font-weight:500;color:var(--text)}
+.qli .qli-m{font-size:var(--fs-xs);color:var(--text-mute);padding:2px 10px;border-radius:var(--r-full);background:var(--accent-soft);flex-shrink:0}
+.qli .qli-body{flex:1}
+.qli .qli-body .qli-sub{font-size:var(--fs-xs);color:var(--text-mute);margin-top:2px}
+.wb-empty{text-align:center;padding:var(--sp-12) var(--sp-6);color:var(--text-mute);font-size:var(--fs-sm)}
+.wb-empty .wb-icon{font-size:40px;margin-bottom:var(--sp-3);opacity:.3}
+
+.clear-btn{padding:var(--sp-2) var(--sp-4);border:1px solid var(--border);border-radius:var(--r-lg);background:transparent;color:var(--text-soft);font-family:var(--ff-sans);font-size:var(--fs-xs);cursor:pointer;transition:all var(--tr-fast)}
+.clear-btn:hover{border-color:var(--err);color:var(--err)}
+
+.section-title{font-size:var(--fs-md);font-weight:600;color:var(--text);margin-bottom:var(--sp-3);margin-top:var(--sp-6)}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media(max-width:480px){
+  .scr{padding:var(--sp-3)}
+  .hm{padding:var(--sp-4) 0 var(--sp-3)}
+  .hm h1{font-size:var(--fs-lg)}
+  .hm .h-icon{width:40px;height:40px;font-size:18px}
+  .hm .stat{gap:var(--sp-3);padding:var(--sp-2) var(--sp-3)}
+  .hm .stat .s .n{font-size:var(--fs-base)}
+  .card{padding:var(--sp-3) var(--sp-3)}
+  .card .card-icon{width:36px;height:36px;font-size:16px}
+  .card .card-title{font-size:var(--fs-sm)}
+  .card .card-desc{font-size:11px}
+  .card-grid{gap:var(--sp-2)}
+  .ch-item{padding:var(--sp-3) var(--sp-4)}
+  .ch-item .ch-title{font-size:var(--fs-sm)}
+  .ch-detail .ch-head h2{font-size:var(--fs-lg)}
+  .kc .kc-head{padding:var(--sp-3) var(--sp-4)}
+  .kc .kc-head .kc-title{font-size:var(--fs-sm)}
+  .kc .kc-body .kb-in{padding:0 var(--sp-4) var(--sp-4)}
+  .exam-card{padding:var(--sp-4)}
+  .exam-card .ec-q{font-size:var(--fs-base)}
+  .exam-res .er-stats{gap:var(--sp-4)}
+  .exam-res .er-stats .s .n{font-size:var(--fs-lg)}
+  .top-bar{margin-bottom:var(--sp-3)}
+  .top-bar .tb-title{font-size:var(--fs-sm)}
+  .hd{padding:0 var(--sp-3)}
+  .go-exam{padding:var(--sp-3) var(--sp-4);font-size:var(--fs-sm);min-height:44px}
+  .exam-nav .en-btn{font-size:var(--fs-xs);padding:var(--sp-2) var(--sp-4)}
+  .exam-card .ec-opts .eco{padding:14px var(--sp-4);font-size:var(--fs-sm)}
+  .exam-card .ec-opts .eco .eco-l{width:32px;height:32px;font-size:var(--fs-sm)}
+  .qli{padding:var(--sp-3) var(--sp-4)}
+  .qli .qli-t{font-size:var(--fs-sm)}
+  .ql .qli-sub{font-size:11px}
+  .kc .kc-body li{font-size:var(--fs-sm);padding:8px 12px 8px 28px}
+  .kc .kc-body li::before{top:16px}
+  .co{font-size:var(--fs-sm)}
+  .fb-box{font-size:var(--fs-sm)}
+  .chapter-item{padding:var(--sp-3) var(--sp-4)}
+  .chapter-item .ch-title{font-size:var(--fs-sm)}
+  .action-btn{padding:10px 20px;font-size:var(--fs-sm)}
+  .exam-res .er-btns button{padding:var(--sp-3) var(--sp-5);font-size:var(--fs-sm);min-height:44px}
+}
+
+@media(min-width:768px){
+  .scr{padding:var(--sp-8) var(--sp-6)}
+}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <span class="hd-t">Compiler</span><span class="hd-s">知己</span>
+  <span class="hd-r"></span>
+  <button class="hd-btn" onclick="toggleTheme()" id="themeBtn" aria-label="切换主题">◐</button>
+</div>
+
+<div class="mn" id="app"></div>
+
+<script>
+// ====================================================================
+// FULL UNABRIDGED KNOWLEDGE DATA — 17 chapters
+// ====================================================================
+const C = [
+{title:'编译与解释的区别',tags:['基础','必考'],
+ks:[{title:'编译程序(Compiler)',body:['工作方式：先把源程序整体翻译成目标程序，再运行目标程序。','常见目标程序：机器语言、汇编语言、目标代码、可执行文件等。','运行时特点：目标程序生成后，运行时通常不再强制需要编译程序参与。','优点：运行速度通常较快，因为翻译工作已经提前完成。','缺点：发现错误通常在编译阶段集中报出；跨平台时可能要重新编译。']},{title:'解释程序(Interpreter)',body:['工作方式：不先生成独立目标程序，而是边解释边执行源程序。','运行时特点：每次执行都强制需要解释程序参与，因为程序运行依赖解释器逐句解释。','优点：交互性强，调试方便，跨平台性通常较好。','缺点：运行速度通常比编译后执行慢。']},{title:'"哪一个是强制性的？"',cot:'如果老师说的是"程序运行时是否必须依赖某个程序"：解释程序是强制参与运行的；编译程序不是运行时强制的，编译后可脱离编译器运行。如果说的是"编译过程哪些阶段必须有"：词法分析、语法分析、语义分析是必要阶段；中间代码生成、代码优化常作为可选阶段理解。'}],
+q:[
+{q:'编译程序的工作方式是怎样的？',o:['边翻译边执行源程序','先把源程序整体翻译成目标程序再运行','直接执行源代码','只检查语法不执行'],a:1,exp:'编译程序先将源程序整体翻译成目标程序(机器语言、汇编语言等)，再运行目标程序。'},
+{q:'以下哪项属于编译程序的常见目标程序？',o:['源代码','Word文档','可执行文件','文本文件'],a:2,exp:'常见目标程序：机器语言、汇编语言、目标代码、可执行文件等。'},
+{q:'编译程序生成的目标程序运行时是否需要编译器的参与？',o:['每次都需要','通常不再强制需要','编译和运行同时需要','不需要操作系统'],a:1,exp:'目标程序生成后，运行时通常不再强制需要编译程序参与，可脱离编译器运行。'},
+{q:'解释程序的工作方式是怎样的？',o:['先整体翻译再执行','边解释边执行源程序','先编译再运行','只运行不翻译'],a:1,exp:'解释程序边解释边执行源程序，不生成独立目标程序。'},
+{q:'解释程序运行时是否需要解释器参与？',o:['不需要','每次执行都强制需要','只需要一次','只在调试时需要'],a:1,exp:'每次执行都强制需要解释器参与，因为程序运行依赖解释器逐句解释。'},
+{q:'以下哪项是解释程序的优点？',o:['运行速度快','跨平台性较差','交互性强调试方便','编译阶段集中报错'],a:2,exp:'解释程序交互性强、调试方便、跨平台性通常较好。'},
+{q:'编译程序相对解释程序的主要优点是什么？',o:['交互性强','调试方便','运行速度更快','占用内存少'],a:2,exp:'编译程序运行速度更快，因为翻译工作已提前完成。'},
+{q:'关于编译和解释的"强制性"理解，以下正确的是？',o:['编译是运行时强制的','解释是运行时强制的','两者都是强制的','两者都不是强制的'],a:1,exp:'解释程序是强制参与运行的；编译程序不是运行时强制的，编译后可脱离编译器运行。'},
+{q:'编译过程中哪些阶段是绝对必要的核心环节？',o:['六个阶段都是必要的','词法分析、语法分析、语义分析','只有词法分析','中间代码生成和代码优化'],a:1,exp:'词法、语法、语义是翻译工作的核心必要环节。中间代码生成、代码优化常作为可选阶段。'},
+{q:'编译程序跨平台时的主要问题是什么？',o:['运行速度变慢','可能需要重新编译','交互性变差','内存占用增加'],a:1,exp:'编译程序跨平台时可能要重新编译，这是其主要缺点之一。'}]},
+{title:'编译过程六阶段',tags:['流程','必考'],
+ks:[{title:'完整编译过程六阶段',body:['1. 词法分析','2. 语法分析','3. 语义分析','4. 中间代码生成','5. 代码优化','6. 目标代码生成']},{title:'各阶段核心输出',body:['1. 词法分析：输出单词序列(Token序列)，包括关键字、标识符、常量、运算符、界符。','2. 语法分析：输出语法树。作用：判断Token序列是否满足文法结构。','3. 语义分析：输出/维护符号表，并检查类型、作用域、声明等语义问题。','4. 中间代码生成：输出中间代码(三地址码、四元式、三元式、逆波兰式、AST)。目的：提高可移植性。','5. 代码优化：输出优化后的中间代码。目的：提高运行效率，减少冗余运算。','6. 目标代码生成：输出目标代码(汇编语言或机器语言)。']},{title:'考点提醒',cot:'老师强调：不是每个阶段都绝对必须。词法、语法、语义是翻译工作的核心必要环节。中间代码生成主要为了迁移性/可移植性。代码优化主要为了效率；不优化也能运行，只是效率可能低。'}],
+q:[
+{q:'编译过程六阶段的正确顺序是？',o:['词法→语法→语义→中间代码→优化→目标代码','语法→词法→语义→优化→中间代码→目标代码','词法→语义→语法→中间代码→目标代码→优化','词法→语法→语义→优化→中间代码→目标代码'],a:0,exp:'完整编译过程分为六个阶段：词法分析→语法分析→语义分析→中间代码生成→代码优化→目标代码生成。'},
+{q:'词法分析阶段的核心输出是什么？',o:['语法树','Token序列(单词序列)','符号表','目标代码'],a:1,exp:'词法分析输出单词序列(Token序列)，包括关键字、标识符、常量、运算符、界符。'},
+{q:'语法分析阶段的核心输出是什么？',o:['Token序列','语法树','符号表','中间代码'],a:1,exp:'语法分析输出语法树，作用是判断Token序列是否满足文法结构。'},
+{q:'语义分析阶段主要检查和维护什么？',o:['单词拼写','代码缩进格式','符号表','执行效率'],a:2,exp:'语义分析输出/维护符号表，并检查类型、作用域、声明等语义问题。'},
+{q:'以下哪个是中间代码的常见形式？',o:['Token序列','语法树','四元式','可执行文件'],a:2,exp:'常见中间代码形式：三地址码、四元式、三元式、逆波兰式、抽象语法树AST。'},
+{q:'代码优化的主要目的是什么？',o:['发现语法错误','提高运行效率减少冗余运算','生成目标代码','检查类型是否匹配'],a:1,exp:'代码优化主要为了提高运行效率、减少冗余运算。不优化也能运行，只是效率可能低。'},
+{q:'目标代码生成阶段的输出是什么？',o:['中间代码','汇编语言或机器语言','Token序列','源代码'],a:1,exp:'目标代码生成输出目标代码，常见形式为汇编语言或机器语言。'},
+{q:'中间代码生成的主要目的是什么？',o:['发现语法错误','提高可移植性便于后续优化','生成可执行文件','检查类型'],a:1,exp:'中间代码生成主要为了提高可移植性(迁移性)，便于后续优化。'}]},
+{title:'正则表达式',tags:['元字符','典型题'],
+ks:[{title:'常用元字符(18个)',body:['1. . 匹配任意单个非空字符。','2. ^ 匹配字符串开头。','3. $ 匹配字符串结尾。','4. * 前面的字符或分组出现0次或多次。','5. + 前面的字符或分组出现1次或多次。','6. ? 前面的字符或分组出现0次或1次。','7. [abc] 匹配a、b、c中任意一个字符。','8. [^abc] 匹配非a、b、c的任意字符。','9. [0-9] 匹配任意数字。','10. | 或，匹配两边任意一个表达式。','11. (ab) 分组，把ab当成整体。','12. {n} 恰好出现n次。','13. {n,} 至少出现n次。','14. {n,m} 出现n到m次。','15. \\d 数字，等价于[0-9]。','16. \\w 字母、数字、下划线。','17. \\s 空白符。','18. \\D、\\W、\\S 分别表示非数字、非字母数字下划线、非空白。']},{title:'典型题：手机号匹配',cot:'11位手机号，第一位1，第二位3/5/6/7/8/9，后9位数字。严格写法：<code>1[356789]\\d{9}</code>。允许空格写法：<code>1[356789]\\d ?\\d{4} ?\\d{4}</code>。[]里写可选字符集，?表示可有可无。'}],
+q:[
+{q:'正则表达式 * 的含义是？',o:['0次或1次','1次或多次','0次或多次','恰好n次'],a:2,exp:'*表示前面的字符或分组出现0次或多次。'},
+{q:'正则表达式 + 的含义是？',o:['0次或多次','1次或多次','0次或1次','任意次'],a:1,exp:'+表示前面的字符或分组出现1次或多次。'},
+{q:'正则表达式 ? 的含义是？',o:['0次或多次','1次或多次','0次或1次','任意次'],a:2,exp:'?表示前面的字符或分组出现0次或1次(可有可无)。'},
+{q:'匹配手机号(第一位1第二位3-9)的正则是？',o:['1[0-9]\\d{9}','1[356789]\\d{9}','1\\d{10}','[1-9]\\d{10}'],a:1,exp:'第1位1，第2位3/5/6/7/8/9，后9位数字：1[356789]\\d{9}。'},
+{q:'[abc]在正则中表示什么？',o:['a,b,c中任意一个字符','abc字符串','非a,b,c的字符','a到c范围'],a:0,exp:'[abc]是字符集，匹配其中任意一个字符。'},
+{q:'[^abc]在正则中表示什么？',o:['a,b,c中任意一个字符','非a,b,c的任意字符','非a到c范围','匹配^,a,b,c'],a:1,exp:'[^abc]匹配非a,b,c的任意字符。'},
+{q:'\\d在正则中表示什么？',o:['字母数字下划线','空白符','数字[0-9]','任意字符'],a:2,exp:'\\d表示数字，等价于[0-9]。'},
+{q:'\\w在正则中表示什么？',o:['数字','空白符','字母数字下划线','任意字符'],a:2,exp:'\\w表示字母、数字、下划线。'},
+{q:'{n,m}表示什么？',o:['恰好n次','至少n次','最多m次','n到m次'],a:3,exp:'{n,m}表示n到m次。'},
+{q:'以下哪个不是正则元字符？',o:['.','*','@','|'],a:2,exp:'@不是正则元字符。常见元字符有.*+?$^|[]{}()\\等。'}]},
+{title:'DFA有穷自动机',tags:['五元组','状态图'],
+ks:[{title:'DFA五元组',formula:'M = (S, Σ, δ, s₀, F)',body:['1. S：有限状态集合。','2. Σ：输入字母表。','3. δ：状态转移函数，δ(当前状态,输入字符)=下一状态。','4. s₀：初始状态。','5. F：终止状态/接受状态集合。']},{title:'DFA的特点',body:['1. 每个状态对每个输入字符有且仅有一条转移路径。','2. 没有ε空转移。','3. 运行过程是确定的。']},{title:'DFA常见表示方法',body:['1. 五元组/转移函数。','2. 状态转换图。','3. 状态转换表。']},{title:'画DFA状态图步骤',body:['1. 画出所有状态节点。','2. 用箭头标出初始状态。','3. 用双圈标出终止状态。','4. 根据δ函数逐条画边。','5. 若同一状态输入a,b到同一状态，可在同一条边上标a,b。']}],
+q:[
+{q:'DFA五元组不包括？',o:['S有限状态集','Σ输入字母表','P产生式集合','δ转移函数'],a:2,exp:'五元组M=(S,Σ,δ,s₀,F)。P产生式集合是文法概念。'},
+{q:'DFA中s₀表示什么？',o:['终止状态集','转移函数','初始状态','状态集'],a:2,exp:'s₀是初始状态。'},
+{q:'DFA是否允许ε空转移？',o:['允许','不允许','仅初态允许','仅终态允许'],a:1,exp:'DFA没有ε空转移(NFA可以有，DFA不允许)。'},
+{q:'DFA特点不包括？',o:['每个输入有唯一路径','运行确定','无ε转移','允许多条路径'],a:3,exp:'每个状态对每个输入有且仅有一条转移路径。'},
+{q:'终止状态如何标记？',o:['双圈','箭头','单圈','星号'],a:0,exp:'箭头标记初态，双圈标记终态。'},
+{q:'DFA中F表示什么？',o:['有限状态集','初始状态','转移函数','终止状态集'],a:3,exp:'F是终止状态/接受状态集合。'}]},
+{title:'文法基础',tags:['四元组','产生式'],
+ks:[{title:'文法四元组',formula:'G = (VN, VT, P, S)',body:['VN：非终结符集合(还能继续推导的语法成分)。','VT：终结符集合(最终句子中保留的基本符号，不能再推导)。','P：产生式集合(描述替换规则，如E→E+T)。','S：开始符号(代表整个句子的起点)。']},{title:'考试注意',cot:'考试中一般直接给产生式，不一定要求写完整四元组。'}],
+q:[
+{q:'VN表示什么？',o:['终结符集','非终结符集','产生式集','开始符号'],a:1,exp:'VN是非终结符集合。'},
+{q:'VT表示什么？',o:['非终结符','终结符','产生式','开始符号'],a:1,exp:'VT是终结符集合。'},
+{q:'P的作用？',o:['开始符','非终结符','描述替换规则','终结符'],a:2,exp:'P是产生式集合，描述替换规则。'},
+{q:'S代表什么？',o:['终结符集','产生式集','开始符号','非终结符集'],a:2,exp:'S是开始符号，代表句子起点。'}]},
+{title:'推导与语法树',tags:['推导','语法树'],
+ks:[{title:'推导',body:['从开始符号出发，不断用产生式替换非终结符，直到得到全是终结符的串。','最左推导：每一步替换句型中最左边的非终结符。','最右推导(规范推导)：每一步替换句型中最右边的非终结符。']},{title:'做题注意',cot:'题目要求最左推导就必须每次替换最左；要求最右推导就必须每次替换最右。没要求时合理推导，不要跳步乱替换。'},{title:'语法树',body:['根节点是开始符号。内部节点是非终结符。','叶子节点从左到右连起来就是句子。','先算的运算在较低层，后算的在较高层。']},{title:'提醒',cot:'说"画语法树"默认普通语法树；说"抽象语法树/AST"才画AST。括号强制改变优先级。'}],
+q:[
+{q:'最左推导替换哪个？',o:['最右','最左','任意','所有'],a:1,exp:'最左推导替换最左非终结符。'},
+{q:'最右推导也叫？',o:['规范推导','标准推导','最左推导','逆向推导'],a:0,exp:'最右推导又称规范推导。'},
+{q:'语法树根节点是什么？',o:['终结符','开始符号','非终结符','产生式'],a:1,exp:'根节点是开始符号。'},
+{q:'先算的运算在树的哪层？',o:['较高层','较低层','中间','不确定'],a:1,exp:'先算在较低层，后算在较高层。'},
+{q:'说"画语法树"默认画什么？',o:['AST','普通语法树','语法分析树','语义树'],a:1,exp:'默认普通语法树。'}]},
+{title:'FIRST集',tags:['集合','核心'],
+ks:[{title:'定义',formula:'FIRST(X)=X能推出的第一个终结符集合。能推空则ε也属于。'},{title:'6条规则',body:['1. X终结→FIRST(X)={X}。','2. X→ε→ε加入FIRST(X)。','3. X→a...→a加入。','4. X→Y...→FIRST(Y)中非ε加入。','5. Y可空→继续看Y后面。','6. 一串全可空→ε加入。']},{title:'练习',code:'S→ABc A→aA|ε B→bB|ε\nFIRST(A)={a,ε} FIRST(B)={b,ε}\nFIRST(S)={a,b,c}\n为什么有c？A和B都可空，开头可能直接到c'}],
+q:[
+{q:'FIRST(X)表示？',o:['X后面能跟的','X能推出的第一个终结符集','X前面的符号','X能推出的全部'],a:1,exp:'X能推出的第一个终结符集合。'},
+{q:'X是终结符则FIRST(X)=？',o:['{ε}','{X}','空集','{X,ε}'],a:1,exp:'X终结则FIRST(X)={X}。'},
+{q:'X→ε则ε加入哪个？',o:['FOLLOW(X)','FIRST(X)','两者都加','都不加'],a:1,exp:'X→ε则ε∈FIRST(X)。'},
+{q:'S→ABc A→aA|ε B→bB|ε FIRST(A)=？',o:['{a}','{ε}','{a,ε}','{a,b,c}'],a:2,exp:'FIRST(A)={a,ε}。'},
+{q:'为什么FIRST(S)有c？',o:['S可空','A和B都可空开头可能到c','c是终结符','S→c'],a:1,exp:'A和B都可空，开头可能直接到c。'}]},
+{title:'FOLLOW集',tags:['集合','核心'],
+ks:[{title:'定义',formula:'FOLLOW(A)=可能紧跟在A后面的终结符集合。开始符号FOLLOW有#'},{title:'4条规则',body:['1. A是开始→#∈FOLLOW(A)。','2. B→αAaβ(a终结)→a∈FOLLOW(A)。','3. B→αAXβ(X非终结)→FIRST(Xβ)-{ε}加入。','4. B→αA或B→αAβ且β⇒*ε→FOLLOW(B)加入。']},{title:'强调',cot:'不是每个非终结符都有#。只有开始符号一开始就有#。其他非终结符只有通过规则继承才可能有#'}],
+q:[
+{q:'FOLLOW(A)表示？',o:['A能推出的','A前面可能出现的','可能跟在A后面的终结符集','A的第一个终结符'],a:2,exp:'可能紧跟在A后面的终结符集合。'},
+{q:'哪个FOLLOW初始含#？',o:['所有非终结符','开始符号','能推ε的','有递归的'],a:1,exp:'只有开始符号有#。'},
+{q:'B→αAaβ(a终结)→a加入？',o:['FIRST(B)','FOLLOW(A)','FIRST(A)','FOLLOW(B)'],a:1,exp:'a在A后面所以a∈FOLLOW(A)。'},
+{q:'B→αA或B→αAβ且β⇒*ε则？',o:['FOLLOW(B)加入FOLLOW(A)','FOLLOW(A)加入FOLLOW(B)','FIRST(B)加入FOLLOW(A)','ε加入FOLLOW(A)'],a:0,exp:'A继承B的FOLLOW。'}]},
+{title:'LL(1)文法判断',tags:['高频','条件'],
+ks:[{title:'三条件',body:['1. 文法不含左递归(典型：A→Aα)。','2. 同非终结符各候选FIRST两两不相交。','3. 有ε候选时FIRST(A)∩FOLLOW(A)=∅。']},{title:'做题顺序',cot:'1.先看左递归 2.再看同非终结符候选FIRST相交 3.只有有ε才做交集 4.不跨非终结符比较 5.单候选式不用分析二'}],
+q:[
+{q:'LL(1)第一条件？',o:['FIRST不交','不含左递归','∩=∅','有ε产生式'],a:1,exp:'三条件：1.无左递归 2.FIRST两两不交 3.有ε∩=∅。'},
+{q:'典型左递归形式？',o:['A→aA','A→Aα','A→αA','A→ε'],a:1,exp:'A→Aα。'},
+{q:'LL(1)需比较？',o:['不同非终结符FIRST','同非终结符各候选FIRST','所有FOLLOW','产生式数量'],a:1,exp:'同非终结符各候选FIRST是否相交。'},
+{q:'S→aAS|b A→bA|ε需查？',o:['S和A的FIRST相交','FIRST(A)∩FOLLOW(A)','左递归','a和b冲突'],a:1,exp:'A有ε候选，看FIRST(A)∩FOLLOW(A)。'}]},
+{title:'移进-归约',tags:['自下而上','高频'],
+ks:[{title:'四种动作',body:['预备：栈和输入串放#，起锚定作用。','移进：输入串当前符号压入栈。','归约：栈顶匹配产生式右部则用左部替换。','接受：栈中#S，输入串#，分析成功。']},{title:'板书例',code:'S→aAbB A→Ac|c B→d  输入accbd\n预备→移进a→移进c→归约A→c→移进c→归约A→Ac→移进b→移进d→归约B→d→归约S→aAbB→接受'}],
+q:[
+{q:'自下而上从什么出发？',o:['开始符号','输入串','产生式','语法树'],a:1,exp:'从输入串出发归约到开始符号。'},
+{q:'移进是指？',o:['弹出栈顶','输入符号压入栈','用左部替换','结束'],a:1,exp:'输入符号压入栈。'},
+{q:'归约是指？',o:['压入','弹出','用左部替换右部','清空'],a:2,exp:'用左部替换匹配的右部。'},
+{q:'接受条件？',o:['栈空输入空','栈#S输入#','栈#输入#','栈S输入空'],a:1,exp:'栈#S且输入#'}]},
+{title:'短语、直接短语、句柄',tags:['语法树','核心'],
+ks:[{title:'定义',body:['短语：语法树中任意子树的叶子节点符号串。','直接短语：深度为1的子树(非终结符一步推出的右部)。','句柄：最左边的直接短语。规范归约中每次归约句柄。']},{title:'做题步骤',body:['画语法树→找所有子树→每棵子树叶子连起来得短语→深度1得直接短语→最左直接短语是句柄']},{title:'提醒',cot:'不是随便一段连续字符就是短语，必须对应同一棵子树。重复短语可合并写。'}],
+q:[
+{q:'短语是语法树中什么？',o:['所有节点','任意子树的叶子节点串','根到叶子的路径','内部节点'],a:1,exp:'任意子树的叶子连接起来的符号串。'},
+{q:'直接短语对应深度？',o:['0','1','2','任意'],a:1,exp:'深度为1的子树。'},
+{q:'句柄是哪个直接短语？',o:['最右','最左','最长','最短'],a:1,exp:'最左边的直接短语。'}]},
+{title:'符号表管理',tags:['语义分析','作用域'],
+ks:[{title:'三类核心动作',body:['插入：遇到声明时插入新标识符(int x→插入x)。','查找：遇到引用时查找当前及外层作用域。','更新：遇到赋值时先查找再更新。']},{title:'作用域规则',body:['内层可声明与外层同名标识符。','引用时优先当前作用域再向外层。','退出作用域后标识符销毁或标记inactive。']}],
+q:[
+{q:'遇到int x声明时执行？',o:['查找','插入','更新','删除'],a:1,exp:'遇到声明时插入。'},
+{q:'引用标识符时先执行？',o:['插入','查找','更新','删除'],a:1,exp:'先查找当前及外层。'},
+{q:'内层同名x引用时优先？',o:['外层','内层','同时','报错'],a:1,exp:'内层优先。'},
+{q:'退出作用域后标识符？',o:['仍保留','销毁或标记inactive','转到全局','不变'],a:1,exp:'销毁或标记inactive。'}]},
+{title:'逆波兰式',tags:['后缀','转换'],
+ks:[{title:'转换步骤',body:['操作数→直接输出。','左括号→压栈。','右括号→弹出直到遇到(。','运算符→比较优先级。','扫描结束→剩余弹出。']},{title:'练习',code:'a-b*c+d→abc*-d+\n(10-4)/2+7*3→10 4-2/7 3*+'}],
+q:[
+{q:'逆波兰式又称？',o:['前缀','后缀','中缀','三元式'],a:1,exp:'后缀表达式。'},
+{q:'a-b*c+d逆波兰式？',o:['abc*-d+','abc-*d+','abc*d-+','-a*bc+d'],a:0,exp:'先乘再减后加→abc*-d+。'},
+{q:'遇到左括号(应？',o:['输出','压入栈','弹出','忽略'],a:1,exp:'左括号压栈。'},
+{q:'遇到右括号)应？',o:['压入','弹出直到遇到(','输出','清空'],a:1,exp:'弹到('},
+{q:'(10-4)/2+7*3逆波兰式？',o:['10 4-2/7 3*+','10 4-2 7 3*/+','10 4 2/-7 3*+','10-4/2+7*3'],a:0,exp:'10 4-2/7 3*+'}]},
+{title:'三地址码、四元式、AST',tags:['中间代码','高频'],
+ks:[{title:'三地址码',body:['每条最多一个运算。a-b*c+d→t1=b*c, t2=a-t1, t3=t2+d。']},{title:'四元式',body:['(op,arg1,arg2,result)。(*,b,c,t1)(-,a,t1,t2)(+,t2,d,t3)']},{title:'AST',body:['去掉语法细节突出运算结构。运算符为内部节点，操作数为叶子。']},{title:'提醒',cot:'说"画语法树"默认普通语法树；说"AST"才画抽象语法树。三地址码每句只写一个运算。'}],
+q:[
+{q:'三地址码每条最多几个运算？',o:['0','1','2','3'],a:1,exp:'最多一个。'},
+{q:'四元式一般形式？',o:['(res,a1,a2,op)','(op,a1,a2,res)','(op,res,a1,a2)','(a1,op,a2,res)'],a:1,exp:'(op,arg1,arg2,result)。'},
+{q:'AST区别于普通语法树？',o:['AST更多细节','AST去掉细节突出运算','两者相同','AST只有叶子'],a:1,exp:'AST去掉语法细节突出运算结构。'}]},
+{title:'基本块与流图',tags:['优化','基本块'],
+ks:[{title:'基本块',body:['顺序执行的三地址代码，无跳入跳出，只有入口和出口。']},{title:'入口规则',body:['第一句是入口。','跳转目标是入口。','跳转下一句是入口。']},{title:'流图画法',body:['每个基本块为节点；自然进入画顺序边；无条件跳转画到目标；条件满足指向目标不满足指向下一块。']}],
+q:[
+{q:'基本块特征？',o:['有多个跳转','顺序执行无跳入跳出','只含一条','含循环'],a:1,exp:'顺序执行无跳入跳出。'},
+{q:'入口规则不包括？',o:['第一句','跳转目标','跳转下一句','最后一句'],a:3,exp:'最后一句不一定是入口。'},
+{q:'条件跳转流图画法？',o:['只画一条','满足指向目标不满足下一块','只画下一块','不画'],a:1,exp:'满足→目标，不满足→下一块。'}]},
+{title:'高频题型清单',tags:['应试','汇总'],
+ks:[{title:'15类高频题型',body:['1.六阶段及输出 2.编译解释区别 3.正则表达式 4.DFA五元组/状态图 5.最左/最右推导 6.画语法树 7.FIRST集 8.FOLLOW集 9.LL(1)判断 10.移进归约表 11.短语/直接短语/句柄 12.符号表过程 13.逆波兰式 14.AST或三地址码/四元式 15.基本块/流图']}],
+q:[
+{q:'以下哪个不属于编译原理高频题？',o:['计算FIRST集','写移进归约表','写OS调度','转逆波兰式'],a:2,exp:'OS调度不是编译原理。'},
+{q:'DFA相关高频题型？',o:['写五元组画状态图','写OS调度','设计数据库','写网络协议'],a:0,exp:'根据DFA五元组画状态图或状态转换表。'}]},
+{title:'最后速记版',tags:['速记','总结'],
+ks:[{title:'核心速记',body:['编译先翻译后执行；解释边翻译边执行。','六阶段：词法token→语法语法树→语义符号表→中间→优化→目标。','DFA五元组(S,Σ,δ,s₀,F)，确定无ε。','FIRST看"能以什么开头"，前面可空继续看后面。','FOLLOW看"后面能跟什么"，后面可空继承左侧。','LL(1)：无左递归·FIRST两两不交·有ε时不冲突。','移进归约：从输入串归约到开始符号，每次归约句柄。','短语：子树叶子；直接短语深度1；句柄：最左直接短语。','符号表：声明插入·引用查找·赋值先查再更新。','三地址码一条一运算；四元式(op,a1,a2,result)。','基本块入口：第一句、跳转目标、跳转下一句。']}],
+q:[
+{q:'六阶段速记正确？',o:['词法符号表语法语法树语义token','词法token语法语法树语义符号表','词法语法树语法符号表语义token','词法token语义语法树语法符号表'],a:1,exp:'词法token→语法语法树→语义符号表。'},
+{q:'FIRST速记要点？',o:['看后面能跟什么','看能以什么开头','看左边','看能否推导'],a:1,exp:'FIRST看"能以什么开头"。'},
+{q:'FOLLOW速记要点？',o:['看能以什么开头','看后面能跟什么','看左边','看能否推导'],a:1,exp:'FOLLOW看"后面能跟什么"。'},
+{q:'基本块入口速记？',o:['第一句跳转目标跳转下一句','第一句最后一句跳转目标','任意语句','只有跳转语句'],a:0,exp:'入口：第一句、跳转目标、跳转下一句。'}]},
+];
+const TOT=C.length;
+const LB='ABCDEFGH';
+
+// ====================================================================
+// STATE
+// ====================================================================
+let S={scr:'home',ch:-1,progress:[...Array(TOT).fill(false)],examCh:0,examQ:0,examOK:0,examNO:0,examDone:false,wrongQ:[],favQ:[]};
+function init(){try{const s=JSON.parse(localStorage.getItem('ccZj2'));if(s){S.progress=s.progress||[...Array(TOT).fill(false)];S.examCh=s.examCh||0;S.wrongQ=s.wrongQ||[];S.favQ=s.favQ||[]}}catch(e){}}
+function sv(){try{localStorage.setItem('ccZj2',JSON.stringify({progress:S.progress,examCh:S.examCh,wrongQ:S.wrongQ,favQ:S.favQ}))}catch(e){}}
+const A=document.getElementById('app');
+function r(){if(S.scr==='home')rHome();else if(S.scr==='chs')rChList();else if(S.scr==='ch')rChapter();else if(S.scr==='examSel')rExamSel();else if(S.scr==='exam')rExam();else if(S.scr==='wrong')rWrongBook()}
+function show(s){S.scr=s;r();window.scrollTo({top:0})}
+
+function exportPDF(){
+  const w=window.open('','_blank');
+  let html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>编译原理 · 讲义</title><style>body{font-family:-apple-system,\'Noto Sans SC\',\'PingFang SC\',sans-serif;font-size:14px;line-height:1.8;color:#1c1c1e;padding:40px;max-width:800px;margin:0 auto}h1{font-size:28px;font-weight:700;text-align:center;margin-bottom:4px}.sub{text-align:center;color:#8e8e93;font-size:13px;margin-bottom:32px;padding-bottom:16px;border-bottom:1px solid #e5e5ea}h2{font-size:20px;font-weight:700;margin-top:36px;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #007aff}.sn{color:#007aff;font-size:14px;font-weight:600}.kc{margin-bottom:16px;padding:12px 16px;border:1px solid #e5e5ea;border-radius:10px;background:#fafafa}.kc h3{font-size:15px;font-weight:600;margin-bottom:6px}.kc ul{list-style:none;padding:0}.kc li{padding:2px 0 2px 14px;position:relative;color:#3a3a3c;font-size:13px}.kc li::before{content:\'\';position:absolute;left:0;top:10px;width:4px;height:4px;border-radius:50%;background:#c7c7cc}.cd{background:#f2f2f7;border-radius:8px;padding:10px 14px;margin:6px 0;font-family:\'SF Mono\',\'JetBrains Mono\',monospace;font-size:12px;line-height:1.6;white-space:pre}.fb{background:#e8f0fe;border-radius:8px;padding:10px 14px;margin:6px 0;font-family:\'SF Mono\',monospace;font-size:13px;text-align:center}.co{background:#fff8e1;border-left:3px solid #ff9500;padding:10px 14px;margin:6px 0;font-size:12px;color:#3a3a3c}.co .ct{font-weight:600;color:#ff9500;font-size:11px;letter-spacing:.5px;margin-bottom:2px}@media print{body{padding:20px}h2{break-after:avoid}.kc{break-inside:avoid}}</style></head><body><h1>编译原理</h1><div class="sub">完整讲义 · 共'+TOT+'章</div>';
+  C.forEach((ch,ci)=>{
+    html+='<h2><span class="sn">'+String(ci+1).padStart(2,'0')+'</span> '+ch.title+'</h2>';
+    (ch.ks||[]).forEach(k=>{
+      html+='<div class="kc"><h3>'+k.title+'</h3>';
+      if(k.code) html+='<div class="cd">'+k.code+'</div>';
+      if(k.formula) html+='<div class="fb">'+k.formula+'</div>';
+      if(k.body?.length) html+='<ul>'+k.body.map(b=>'<li>'+b+'</li>').join('')+'</ul>';
+      if(k.cot) html+='<div class="co"><div class="ct">考点</div>'+k.cot+'</div>';
+      html+='</div>';
+    });
+  });
+  html+='</body></html>';
+  w.document.write(html);w.document.close();
+  setTimeout(()=>{w.focus();w.print()},500);
+}
+
+function resetProgress(){if(confirm('重置所有学习进度？\n已读章节、错题本、收藏记录将被清空。')){S.progress=[...Array(TOT).fill(false)];S.wrongQ=[];S.favQ=[];sv();r()}}
+
+function rHome(){
+  const d=S.progress.filter(Boolean).length;const wn=S.wrongQ.length;const fn=S.favQ.length;
+  A.innerHTML=`<div class="scr act"><div class="hm">
+    <div class="h-icon">◇</div>
+    <h1>编译原理</h1>
+    <div class="sub">知己 · 覆盖全部 ${TOT} 章考点</div>
+    <div class="stat"><div class="s"><div class="n">${TOT}</div><div class="l">章节</div></div>
+    <div class="s"><div class="n">${d}</div><div class="l">已读</div></div>
+    ${wn?`<div class="s"><div class="n">${wn}</div><div class="l">错题</div></div>`:''}
+    ${fn?`<div class="s"><div class="n">${fn}</div><div class="l">收藏</div></div>`:''}</div>
+  </div><div class="card-grid">
+    <div class="card" onclick="show('chs')">
+      <div class="card-icon blue">◈</div>
+      <div class="card-body">
+        <div class="card-title">复习</div>
+        <div class="card-desc">${d}/${TOT} 章已读</div>
+      </div>
+      <span class="card-arrow">→</span>
+    </div>
+    <div class="card" onclick="show('examSel')">
+      <div class="card-icon gold">▣</div>
+      <div class="card-body">
+        <div class="card-title">答题</div>
+        <div class="card-desc">${TOT} 章 · 每章 5-10 题</div>
+      </div>
+      <span class="card-arrow">→</span>
+    </div>
+    ${wn?`<div class="card" onclick="show('wrong')">
+      <div class="card-icon red">◉</div>
+      <div class="card-body">
+        <div class="card-title">错题本</div>
+        <div class="card-desc">${wn} 题待重练</div>
+      </div>
+      <span class="card-arrow">→</span>
+    </div>`:''}
+    <div class="actions">
+      <button class="action-btn" onclick="exportPDF()">⎙ 导出 PDF</button>
+      <button class="action-btn" onclick="resetProgress()" style="color:var(--err)">↺ 重置进度</button>
+    </div>
+  </div></div>`;
+}
+
+function rChList(){
+  const d=S.progress.filter(Boolean).length;
+  A.innerHTML=`<div class="scr act"><div class="top-bar"><button class="tb-back" onclick="show('home')">←</button><span class="tb-title">选择章节</span><span class="tb-meta">${d}/${TOT}</span></div>
+    <div class="ch-list">${C.map((ch,i)=>{const pr=S.progress[i];
+      return `<div class="ch-item" onclick="openCh(${i})"><span class="ch-num">${String(i+1).padStart(2,'0')}</span>
+        <span class="ch-title">${ch.title}</span><span class="ch-tag">${ch.tags[0]}</span>
+        <span class="ch-check ${pr?'dn':''}">${pr?'✓':''}</span></div>`;
+    }).join('')}</div></div>`;
+}
+
+function openCh(i){S.ch=i;if(!S.progress[i]){S.progress[i]=true;sv()}show('ch')}
+
+function rChapter(){
+  const ch=C[S.ch];
+  let h=`<div class="scr act"><div class="top-bar"><button class="tb-back" onclick="show('chs')">←</button><span class="tb-title">${ch.title}</span></div>
+    <div class="ch-detail"><div class="ch-head"><div class="ch-num">第${String(S.ch+1).padStart(2,'0')}章</div><h2>${ch.title}</h2></div>`;
+  (ch.ks||[]).forEach((k,i)=>{
+    const badges = ['要点','关键','核心','速记','理解','总结','提示','详解'];
+    const badge = badges[i % badges.length];
+    h+=`<div class="kc"><div class="kc-head" onclick="this.classList.toggle('cd');this.nextElementSibling.classList.toggle('cd')"><span class="kc-arrow">▾</span><span class="kc-title">${k.title}</span><span class="kc-badge">${badge}</span></div>
+      <div class="kc-body"><div class="kb-in">${k.code?`<div class="cb">${k.code}</div>`:''}${k.formula?`<div class="fb-box">${k.formula}</div>`:''}
+      ${k.body?.length?`<ul>${k.body.map(b=>{let t=b.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');return `<li>${t}</li>`;}).join('')}</ul>`:''}${k.cot?`<div class="co"><div class="co-t">考点</div>${k.cot}</div>`:''}</div></div></div>`;
+  });
+  h+=`<div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-5);max-width:360px;margin-left:auto;margin-right:auto">
+    <button class="go-exam" onclick="startExam(${S.ch})" style="flex:1">去答题</button>
+    ${S.ch < TOT - 1 ? `<button class="go-exam" onclick="openCh(${S.ch+1})" style="flex:1;background:transparent;color:var(--accent);border:1.5px solid var(--accent)">下一章 →</button>` : ''}
+  </div></div></div>`;
+  A.innerHTML=h;
+}
+
+// ====================================================================
+// EXAM
+// ====================================================================
+function rExamSel(){
+  A.innerHTML=`<div class="scr act"><div class="top-bar"><button class="tb-back" onclick="show('home')">←</button><span class="tb-title">选择章节</span><span class="tb-meta">答题</span></div>
+    <div class="ch-list">${C.map((ch,i)=>{const qc=ch.q?.length||0;
+      return `<div class="ch-item" onclick="startExam(${i})"><span class="ch-num">${String(i+1).padStart(2,'0')}</span>
+        <span class="ch-title">${ch.title}</span><span class="ch-tag">${qc}题</span></div>`;
+    }).join('')}</div></div>`;
+}
+
+function startExam(i){S.examCh=i;S.examQ=0;S.examOK=0;S.examNO=0;S.examDone=false;(C[i].q||[]).forEach(q=>delete q._answered);show('exam')}
+
+function rExam(){
+  const ch=C[S.examCh];const qs=ch.q||[];
+  if(!qs.length){A.innerHTML=`<div class="scr act"><div class="top-bar"><button class="tb-back" onclick="show('examSel')">←</button><span class="tb-title">暂无题目</span></div></div>`;return}
+  if(S.examQ>=qs.length){rExamResult();return}
+  const q=qs[S.examQ];const fi=S.favQ.find(f=>f.ch===S.examCh&&f.qi===S.examQ);
+  const dots=qs.map((_,i)=>{let c='';if(i<S.examQ){const qp=qs[i];c=qp._answered!==undefined?(qp._answered?'cr':'wr'):''}if(i===S.examQ)c='ac';return `<div class="ep-dot ${c}"></div>`}).join('');
+  let fb='';if(q._answered!==undefined&&S.examDone){fb=`<div class="ec-fb ${q._answered?'cr':'wr'}"><div class="fb-t">${q._answered?'正确':'错误'}</div><div class="fb-d">${q.exp}</div></div>`}
+  A.innerHTML=`<div class="scr act"><div class="top-bar"><button class="tb-back" onclick="show('examSel')">←</button><span class="tb-title">${ch.title}</span><span class="tb-meta">${S.examQ+1}/${qs.length}</span></div>
+    <div class="exam-prog">${dots}</div>
+    <div class="exam-card"><div class="ec-header"><span class="ec-tag">单选</span><button class="ec-fav ${fi?'act':''}" onclick="toggleFav(${S.examCh},${S.examQ})">${fi?'◆ 已收藏':'◇ 收藏'}</button></div>
+      <div class="ec-q">${q.q}</div><div class="ec-opts">${q.o.map((opt,i)=>{
+        let cl='';if(q._answered!==undefined&&S.examDone){cl='di';if(i===q.a)cl+=' cr';else if(i===parseInt(q.sel))cl+=' wr'}
+        return `<div class="eco ${cl}" onclick="${q._answered===undefined?`ans(${i})`:''}"><span class="eco-l">${LB[i]}</span><span>${opt}</span></div>`;
+      }).join('')}</div>${fb}</div>
+    <div class="exam-nav"><button class="en-btn" ${S.examQ===0?'disabled':''} onclick="examPrev()">← 上一题</button>
+      <span class="en-st">${S.examOK}对 ${S.examNO}错</span>
+      ${S.examDone?`<button class="en-btn pri" onclick="examNext()">${S.examQ<qs.length-1?'下一题 →':'查看结果'}</button>`:'<span style="width:80px"></span>'}</div></div>`;
+}
+
+function toggleFav(ci,qi){const idx=S.favQ.findIndex(f=>f.ch===ci&&f.qi===qi);if(idx>=0)S.favQ.splice(idx,1);else S.favQ.push({ch:ci,qi:qi});sv();rExam()}
+function ans(idx){const q=C[S.examCh].q[S.examQ];q._answered=idx===q.a;q.sel=idx;if(idx===q.a)S.examOK++;else{S.examNO++;if(!S.wrongQ.find(w=>w.ch===S.examCh&&w.qi===S.examQ)){const qi=S.examQ;S.wrongQ.push({ch:S.examCh,qi,question:q.q,userAnswer:q.o[idx],correctAnswer:q.o[q.a],explain:q.exp});sv()}}S.examDone=true;rExam()}
+function examNext(){S.examQ++;S.examDone=false;rExam()}
+function examPrev(){if(S.examQ>0){S.examQ--;S.examDone=false;rExam()}}
+
+function rExamResult(){
+  const ch=C[S.examCh];const qs=ch.q||[];const t=qs.length;const p=t?Math.round(S.examOK/t*100):0;
+  A.innerHTML=`<div class="scr act"><div class="top-bar"><button class="tb-back" onclick="show('examSel')">←</button><span class="tb-title">答题结果</span></div>
+    <div class="exam-res"><div class="er-icon">◆</div><h3>${ch.title}</h3><p class="er-sub">${t}题完成 · 正确率 ${p}%</p>
+      <div class="er-stats"><div class="s"><div class="n">${S.examOK}</div><div class="l">正确</div></div>
+      <div class="s"><div class="n">${S.examNO}</div><div class="l">错误</div></div>
+      <div class="s"><div class="n">${p}%</div><div class="l">正确率</div></div></div>
+      <div class="er-btns"><button class="pri" onclick="examRetry()">重新答题</button>
+      <button onclick="nextExamCh()">下一章</button>
+      <button onclick="show('examSel')">选其他章</button></div></div></div>`;
+}
+
+function examRetry(){const qs=C[S.examCh].q||[];qs.forEach(q=>delete q._answered);S.examQ=0;S.examOK=0;S.examNO=0;S.examDone=false;rExam()}
+function nextExamCh(){const n=S.examCh+1;if(n<TOT)startExam(n);else show('home')}
+
+// ====================================================================
+// WRONG BOOK
+// ====================================================================
+function rWrongBook(){
+  const w=S.wrongQ;const f=S.favQ;
+  A.innerHTML=`<div class="scr act"><div class="top-bar"><button class="tb-back" onclick="show('home')">←</button><span class="tb-title">错题本</span><span class="tb-meta">${w.length}题</span></div>
+    ${w.length?`<div class="q-list" style="margin-bottom:var(--sp-4)">${w.map((wi,i)=>{
+      const ch=C[wi.ch];return `<div class="qli" onclick="removeWrong(${i})" style="cursor:pointer"><span class="qli-n">${String(wi.ch+1).padStart(2,'0')}</span>
+        <div class="qli-body"><div class="qli-t">${wi.question}</div><div class="qli-sub">你选:${wi.userAnswer} · 正解:${wi.correctAnswer}</div></div></div>`;
+    }).join('')}</div>
+    <div style="display:flex;gap:var(--sp-2);justify-content:center">
+      <button class="go-exam" onclick="startWrongExam()" style="max-width:200px;padding:var(--sp-3) var(--sp-5);font-size:var(--fs-sm)">重新练习</button>
+      <button class="clear-btn" onclick="if(confirm('清空所有错题？')){S.wrongQ=[];sv();r()}">清空</button>
+    </div>`
+    :`<div class="wb-empty"><div class="wb-icon">◇</div><p>暂无错题</p><p style="margin-top:4px">答题做错的题目会自动收录到这里</p></div>`}
+    ${f.length?`<div class="section-title">收藏题目</div><div class="q-list">${f.map((fi,i)=>{
+      const ch=C[fi.ch];const q=ch.q[fi.qi];return `<div class="qli" onclick="startExam(${fi.ch})"><span class="qli-n">${String(fi.ch+1).padStart(2,'0')}</span>
+        <span class="qli-t">${q.q}</span><span class="qli-m">◆</span></div>`;
+    }).join('')}</div>`:''}
+  </div>`;
+}
+
+function removeWrong(i){S.wrongQ.splice(i,1);sv();rWrongBook()}
+
+// ====================================================================
+// WRONG EXAM
+// ====================================================================
+function startWrongExam(){
+  const qs=S.wrongQ;if(!qs.length)return;
+  S.weExam=qs.map(w=>({...w}));S.weIdx=0;S.weOK=0;S.weNO=0;S.weDone=false;rWrongExam();
+}
+
+function rWrongExam(){
+  const qs=S.weExam;if(!qs||!qs.length||S.weIdx>=qs.length){rWrongExamResult();return}
+  const w=qs[S.weIdx];const ch=C[w.ch];const q=ch.q[w.qi];
+  A.innerHTML=`<div class="scr act"><div class="top-bar"><button class="tb-back" onclick="show('wrong')">←</button><span class="tb-title">错题重练</span><span class="tb-meta">${S.weIdx+1}/${qs.length}</span></div>
+    <div class="exam-card"><div class="ec-header"><span class="ec-tag">错题重练 · ${ch.title}</span></div>
+    <div class="ec-q">${q.q}</div><div class="ec-opts">${q.o.map((opt,i)=>{
+      let cl='';if(w._answered!==undefined&&S.weDone){cl='di';if(i===q.a)cl+=' cr';else if(i===parseInt(w.sel))cl+=' wr'}
+      return `<div class="eco ${cl}" onclick="${w._answered===undefined?`weAns(${i})`:''}"><span class="eco-l">${LB[i]}</span><span>${opt}</span></div>`;
+    }).join('')}</div>
+    ${w._answered!==undefined&&S.weDone?`<div class="ec-fb ${w._answered?'cr':'wr'}"><div class="fb-t">${w._answered?'正确':'错误'}</div><div class="fb-d">${q.exp}</div></div>`:''}</div>
+    <div class="exam-nav"><span></span>${S.weDone?`<button class="en-btn pri" onclick="weNext()">${S.weIdx<qs.length-1?'下一题':'看结果'}</button>`:'<span></span>'}</div></div>`;
+}
+
+function weAns(idx){const w=S.weExam[S.weIdx];const ch=C[w.ch];const q=ch.q[w.qi];w._answered=idx===q.a;w.sel=idx;if(idx===q.a)S.weOK++;else S.weNO++;S.weDone=true;rWrongExam()}
+function weNext(){S.weIdx++;S.weDone=false;rWrongExam()}
+
+function rWrongExamResult(){
+  const qs=S.weExam;const t=qs.length;const p=t?Math.round(S.weOK/t*100):0;
+  A.innerHTML=`<div class="scr act"><div class="top-bar"><button class="tb-back" onclick="show('wrong')">←</button><span class="tb-title">重练结果</span></div>
+    <div class="exam-res"><div class="er-icon">◆</div><h3>错题重练</h3><p class="er-sub">${t}题完成 · 正确率 ${p}%</p>
+      <div class="er-stats"><div class="s"><div class="n">${S.weOK}</div><div class="l">正确</div></div>
+      <div class="s"><div class="n">${S.weNO}</div><div class="l">仍错</div></div>
+      <div class="s"><div class="n">${p}%</div><div class="l">正确率</div></div></div>
+      <div class="er-btns"><button class="pri" onclick="show('wrong')">完成</button><button onclick="startWrongExam()">再来一次</button></div></div></div>`;
+}
+
+// ====================================================================
+// THEME
+// ====================================================================
+let dark=localStorage.getItem('ccZj2t')==='dark';
+if(dark)document.documentElement.setAttribute('data-theme','dark');
+function toggleTheme(){dark=!dark;document.documentElement.setAttribute('data-theme',dark?'dark':'light');localStorage.setItem('ccZj2t',dark?'dark':'light')}
+
+init();r();
+</script>
+</body>
+</html>
